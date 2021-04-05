@@ -1,47 +1,122 @@
-# srt-live-server
-Dockerized version of Edward Wu's SRT Live Server (SLS) and Haivision's SRT SDK
-All credit should go to the original tool author(s) - this is just a dockerization for convenience and portability.
+# Introduction
+The SubC Streaming Service has changed and was at one time using RTMP for its encoder. Then it changed to using WebRTC for streaming and now we have WebRTC and SRT streaming encoders in the program.
 
-Requirements:
-* Docker
-* Access to Dockerhub, for either the prebuilt image or base layers
+We also now refer to as “Offshore Real-Time Streaming” with it being build into DVRO v7 and Fugro’s custom streaming application (formerly stand-alone application).
 
-To build:
-`docker build -t friendly_image_name_goes_here .`
+# What is SRT?
+You can find official information at [https://www.haivision.com/products/srt-secure-reliable-transport/](https://www.haivision.com/products/srt-secure-reliable-transport/ "https://www.haivision.com/products/srt-secure-reliable-transport/"), but SRT(Secure Reliable Transport) is an open source video streaming protocol that brings pristine quality, low-latency live video over the public internet.
 
-To run from dockerhub:
-`docker run -d -p 1935:1935/udp ravenium/srt-live-server`
+Currently usage and projects using this technology is more towards commercial broadcasting but it is starting to make it’s way into the main stream.
 
-To run via docker-compose:
-`mkdir -p logs; chmod a+w logs; docker-compose up`
+# Detailed Server Information
+This is a port of the Ravenium-srt-live server (https://github.com/ravenium/srt-live-server). It is a dockerization of the below packages
+ - Edward Wu's SRT Live Server (SLS) - https://github.com/Edward-Wu/srt-live-server
+ - Haivision's SRT SDK - https://github.com/Haivision/srt
 
-Notes on the sls.conf (the config for srt-live-server)
-* Set port to default of 1935/UDP.  Note that SRT doesn't technically have a default protocol port, so you will have to explicitly call this out in stream URLs (see below).  1935/TCP is what RTMP uses, so this makes it simpler to remember.
-* Set default latency to 200ms. (Nimble Streamer recommendeds no lower than 120ms no matter what, Haivision can do lower on hardware)  If your streams are getting "confetti" you may want to set this higher, but I've found this to be a safe default in using OBS and Larix SRT streams over a reasonable internet connection. Think of this as a "safety buffer" for connection burps.
-* There are two "endpoints", a publisher and an application.  Publishing is for sending, application is for recieving. They are "input/live" and "output/live", respectively - I changed them from the author's defaults to make them a bit less confusing.
+If you need to research into any reported issues, checkout https://github.com/Edward-Wu/srt-live-server/issues for possible matches.
 
+I have forked it manually, https://github.com/SubCImaging/SubCStream.Ravenium-srt-live-server.
 
-Example Sending of SRT in OBS:
-* In the setup menu under "stream", select "Custom..."  leave the Key field blank.
-* Put the following url to send to your docker container: `srt://your.server.ip:1935?streamid=input/live/yourstreamname`
+## Checking the Server Status
+**Steps**
+1.  SSH into the server
+2.  Type “sudo docker ps | grep ravenium-srt”
 
-Example of Receiving of SRT in OBS:
-* Add a Media Source
-* Put the following url to receive: `srt://your.server.ip:1935?streamid=output/live/yourstreamname`
+The resulting output should indicate a uptime. But if nothing appears from the typed command then the application has crashed or was not running for some other reason.
 
-Errata, thoughts, future:
-* There are some things in the config that don't seem to work right yet, e.g. the on_event and status_url directives.  If anyone gets these working, please let me know!
-* The container builds on the latest SRT SDK at build time (1.4.1 as of this writing) and srt-live-server (1.4.8) so try rebuilding the container if you need a new feature in either that isn't here yete.  No guarantee future things won't break it.
-* You can map a docker volume so you can change your SLS config, then reload the container.  Add the following to your docker run line: `-v /path/to/your/local/sls.conf:/etc/sls/sls.conf`
-* I'm looking for a way to monitor log output and parse the results for feed start/stop to make a stats server similar to nginx-rtmp, so if any bash/python/grep ninjas want to give it a whirl, please submit a PR!
+## Starting the Server
 
+You can start the server by typing the command below.
 
-References:
+`1sudo docker run -d -p 1935:1935/udp --name ravenium-srt subc/ravenium-srt:develop`
 
-https://github.com/Edward-Wu/srt-live-server
+After it has been started, ensure it has been started.
 
-https://blog.wmspanel.com/2019/06/srt-latency-maxbw-efficient-usage.html
+## Manually Stopping and Starting the Server
 
-https://www.haivision.com/blog/all/how-to-configure-srt-settings-video-encoder-optimal-performance/
+If you just want to restart the server, you can do so by running the commands below.
 
+`1sudo docker stop ravenium-srt 2sudo docker start ravenium-srt`
 
+You can change the name of the docker container and stop and start an existing container this way as well.
+
+As always, after starting the container, check if it is started and running.
+
+## Deployment
+
+Manually deployment to a new server is made possible using the command below.
+
+`1sudo docker run -d -p 1935:1935/udp --name ravenium-srt subc/ravenium-srt:develop`
+
+The run command will check if the image is already present and if not, download it from the SubC docker repo.
+
+If you get into an situation when an older version of the server already deployed to the server, then you will need to pull down the new changes and run the container using the above command.
+
+An example of the pull command is below.
+
+`1sudo docker pull subc/ravenium-srt:develop`
+
+# Testing
+
+Testing can be done using the SubC Streaming system. But if you need to do more basic/manual testing you will need:
+
+-   Visual Studio
+    
+-   [![](https://github.githubassets.com/favicon.ico)https://github.com/SubCImaging/SubCWriter - Restricted link,  try another account](https://github.com/SubCImaging/SubCWriter) ​applicatio
+    
+-   VLC 4.0 or OBS Studio
+
+The flow for low level testing is to use the SubC Writer application to stream out content to the SRT server and then preform playback using VLC 4.0/OBS Studio
+
+## Creating the Sending and Receiving URL’s
+
+![](blob:https://subcimaging.atlassian.net/374b1c5d-00d2-4ef2-b19d-7655549025aa#media-blob-url=true&id=6ac7ecef-c038-418a-883d-0c51c1e739ed&collection=contentId-1283129438&contextId=1283129438&mimeType=image%2Fpng&name=image-20210405-012709.png&size=33208&width=539&height=211)
+
+The SRT server has two sides available to it, but all working on the port 1935.
+
+As shown above, your input URL would have the input typed and the playing unit would have the output typed.
+
+### Sending URL
+
+`1srt://your.server.ip:1935?streamid=input/live/yourstreamname`
+
+### Playback URL
+
+`1srt://your.server.ip:1935?streamid=input/live/yourstreamname`
+
+## Setting up Streamer
+
+To start the SubCWriter application currently, you will need to install Visual Studio and run it from there. We do not have a compiled version currently posted but that could change down the road.
+
+Keep in mind this is a modified version of a MediaLooks sample application but often will have issues/bugs.
+
+You may need to download and install the MediaLooks SDK to run this application as well.
+
+Once you have everything needed to run the application, follow the steps below.
+
+**Steps**
+1.  Choose SRT from the encoder drop-down
+2.  Choose h.264 or h.265 as the encoder
+3.  Choose to send audio or not
+4.  Put your generated URL in the box at the bottom
+5.  Click the start button
+    
+
+## Starting Playback
+Depending on the chosen application, follow the directions below.
+
+### VLC 4.0+
+1.  Open VLC
+2.  Press CTRL + N to open the network stream dialog box
+3.  Type in your generated URL
+4.  Click Play
+    
+
+### OBS Studio
+1.  Open OBS
+2.  Add a new media source
+3.  Name the source and click Ok
+4.  Un-check “Local File” box
+5.  Paste in the input box your generated URL
+6.  Choose to enable/disable any of the other options and click Ok
+7.  Your stream should be present allowing for you to resize and position it as you need.
